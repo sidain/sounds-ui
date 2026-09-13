@@ -1,67 +1,80 @@
-<p align="center"><a href="https://laravel.com" target="_blank"><img src="https://raw.githubusercontent.com/laravel/art/master/logo-lockup/5%20SVG/2%20CMYK/1%20Full%20Color/laravel-logolockup-cmyk-red.svg" width="400" alt="Laravel Logo"></a></p>
+# Sounds UI
 
-<p align="center">
-<a href="https://github.com/laravel/framework/actions"><img src="https://github.com/laravel/framework/workflows/tests/badge.svg" alt="Build Status"></a>
-<a href="https://packagist.org/packages/laravel/framework"><img src="https://img.shields.io/packagist/dt/laravel/framework" alt="Total Downloads"></a>
-<a href="https://packagist.org/packages/laravel/framework"><img src="https://img.shields.io/packagist/v/laravel/framework" alt="Latest Stable Version"></a>
-<a href="https://packagist.org/packages/laravel/framework"><img src="https://img.shields.io/packagist/l/laravel/framework" alt="License"></a>
-</p>
+A small Laravel + Vue tool for browsing a local library of audio files, previewing and labeling them, and exporting a selected batch as OGG files ready to drop into the **MySharedMediaSounds** World of Warcraft addon.
 
-## About Laravel
+## What it does
 
-Laravel is a web application framework with expressive, elegant syntax. We believe development must be an enjoyable and creative experience to be truly fulfilling. Laravel takes the pain out of development by easing common tasks used in many web projects, such as:
+1. **Browse** — scans a configured `FILES/INPUT` directory (and its subfolders) and lists all audio files in a grid, with folder filters and lazy-loading as you scroll.
+2. **Preview** — click to play/stop any file directly in the browser before deciding whether to keep it.
+3. **Select & label** — check the files you want, optionally give each one a custom label.
+4. **Submit** — selected files are sent to the backend, which:
+   - copies them into a timestamped folder under `FILES/OUTPUT`
+   - converts each to `.ogg` via `ffmpeg`, stripping metadata
+   - writes a `files.txt` manifest of the resulting filenames
+   - generates a `files.lua` snippet formatted as a Lua sound table, ready to paste into `MySharedMediaSounds`
+   - zips the whole output folder for easy transfer
 
-- [Simple, fast routing engine](https://laravel.com/docs/routing).
-- [Powerful dependency injection container](https://laravel.com/docs/container).
-- Multiple back-ends for [session](https://laravel.com/docs/session) and [cache](https://laravel.com/docs/cache) storage.
-- Expressive, intuitive [database ORM](https://laravel.com/docs/eloquent).
-- Database agnostic [schema migrations](https://laravel.com/docs/migrations).
-- [Robust background job processing](https://laravel.com/docs/queues).
-- [Real-time event broadcasting](https://laravel.com/docs/broadcasting).
+## Tech Stack
 
-Laravel is accessible, powerful, and provides tools required for large, robust applications.
+- **Backend:** PHP 8.1+, Laravel 10
+- **Frontend:** Vue 3 (single component, `SoundManager.vue`), Vite
+- **Conversion:** `ffmpeg` (external binary, called via `exec()`)
 
-## Learning Laravel
+## Requirements
 
-Laravel has the most extensive and thorough [documentation](https://laravel.com/docs) and video tutorial library of all modern web application frameworks, making it a breeze to get started with the framework.
+- PHP >= 8.1 and Composer
+- Node.js & npm
+- `ffmpeg` installed and available on the system (or point `FFMPEG_PATH` at it)
+- A `FILES/INPUT` directory (at the project root) containing your source audio, organized into subfolders
 
-You may also try the [Laravel Bootcamp](https://bootcamp.laravel.com), where you will be guided through building a modern Laravel application from scratch.
+## Setup
 
-If you don't feel like reading, [Laracasts](https://laracasts.com) can help. Laracasts contains thousands of video tutorials on a range of topics including Laravel, modern PHP, unit testing, and JavaScript. Boost your skills by digging into our comprehensive video library.
+1. **Clone and install dependencies**
+   ```bash
+   git clone https://github.com/sidain/sounds-ui.git
+   cd sounds-ui
+   composer install
+   npm install
+   ```
 
-## Laravel Sponsors
+2. **Configure environment**
+   ```bash
+   cp .env.example .env
+   php artisan key:generate
+   ```
+   Add to `.env` if `ffmpeg` isn't on your PATH:
+   ```
+   FFMPEG_PATH=/path/to/ffmpeg
+   ```
 
-We would like to extend our thanks to the following sponsors for funding Laravel development. If you are interested in becoming a sponsor, please visit the [Laravel Partners program](https://partners.laravel.com).
+3. **Set up input/output folders**
+   Create `FILES/INPUT` at the project root and populate it with subfolders of source audio (`.wav`, etc.). `FILES/OUTPUT` will be created automatically as you submit batches.
 
-### Premium Partners
+4. **Run the app**
+   ```bash
+   php artisan serve
+   npm run dev
+   ```
+   Visit `http://localhost:8000`.
 
-- **[Vehikl](https://vehikl.com/)**
-- **[Tighten Co.](https://tighten.co)**
-- **[WebReinvent](https://webreinvent.com/)**
-- **[Kirschbaum Development Group](https://kirschbaumdevelopment.com)**
-- **[64 Robots](https://64robots.com)**
-- **[Curotec](https://www.curotec.com/services/technologies/laravel/)**
-- **[Cyber-Duck](https://cyber-duck.co.uk)**
-- **[DevSquad](https://devsquad.com/hire-laravel-developers)**
-- **[Jump24](https://jump24.co.uk)**
-- **[Redberry](https://redberry.international/laravel/)**
-- **[Active Logic](https://activelogic.com)**
-- **[byte5](https://byte5.de)**
-- **[OP.GG](https://op.gg)**
+## API Routes
 
-## Contributing
+| Method | Route | Description |
+|---|---|---|
+| `GET` | `/api/input-files` | Lists directories/files under `FILES/INPUT` (initial load, capped batch) |
+| `GET` | `/api/get-files?directory=...` | Lists files in a specific directory (for filtering/lazy load) |
+| `GET` | `/api/play-audio?path=...` | Streams a single input file for in-browser preview |
+| `POST` | `/api/submit-sounds` | Converts + packages the selected files (see "What it does" above) |
 
-Thank you for considering contributing to the Laravel framework! The contribution guide can be found in the [Laravel documentation](https://laravel.com/docs/contributions).
+## Output Format
 
-## Code of Conduct
+Each submission produces, inside `FILES/OUTPUT/<timestamp>/`:
+- `*.ogg` — converted audio files
+- `files.txt` — plain list of filenames
+- `files.lua` — a Lua table matching the format `MySharedMediaSounds` expects
+- `<timestamp>.zip` — everything above, zipped
 
-In order to ensure that the Laravel community is welcoming to all, please review and abide by the [Code of Conduct](https://laravel.com/docs/contributions#code-of-conduct).
+## Notes
 
-## Security Vulnerabilities
-
-If you discover a security vulnerability within Laravel, please send an e-mail to Taylor Otwell via [taylor@laravel.com](mailto:taylor@laravel.com). All security vulnerabilities will be promptly addressed.
-
-## License
-
-The Laravel framework is open-sourced software licensed under the [MIT license](https://opensource.org/licenses/MIT).
-# sounds-ui
+- This is a personal tool built around a specific `MySharedMediaSounds` workflow rather than a general-purpose audio converter — labels, categories, and paths in the generated Lua currently assume that addon's folder structure.
+- No auth is applied to the file-management routes; run this locally rather than exposing it publicly as-is.
