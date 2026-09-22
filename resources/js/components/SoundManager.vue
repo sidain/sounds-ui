@@ -17,6 +17,9 @@
 
             <div class="dropdown-container folders">
                 <button @click="isOpen = !isOpen">Filter Folders ▾</button>
+
+                <button>Reset Folders</button>
+                <button>Clear All</button>
                 <!-- <div v-if="isOpen" class="dropdown-menu"> -->
                 <div  class="dropdown-menu">
                     <label v-for="dir in directories" :key="dir" class="dropdown-item">
@@ -28,14 +31,21 @@
 
             <div class="dropdown-container zipFiles">
                 <button @click="isZipOpen = !isZipOpen">Zip Files▾</button>
+                
                 <div v-if="isZipOpen" class="dropdown-menu">
                 <!-- <div  class="dropdown-menu"> -->
                     <label v-for="zip in unextractedZipFiles" :key="zip" class="dropdown-item">
                         <!-- <input type="checkbox"  /> -->
-                        <button>📥</button>
                         {{ zip }}
+                        <button>📥</button>
                     </label>
                 </div>
+            </div>
+
+
+            <div class="fileSearch">
+                <label>Search: </label>
+                <input type="text" />
             </div>
         </div>
 
@@ -241,12 +251,17 @@ const loadMoreFiles = async () => {
                 path: `/api/play-audio?path=${encodeURIComponent(filePath)}`,
                 selected: false,
                 label: filePath,
-                show: selectedDirectories.value.length === 0 || selectedDirectories.value.includes(nextDirectory),
+                show: true,
             }));
 
             // Push them into your reactive array
             audioFiles.value.push(...newFiles);
             usedDirectories.value.push(nextDirectory);
+
+            if (!selectedDirectories.value.includes(nextDirectory)) {
+                selectedDirectories.value.push(nextDirectory);
+            }
+
         }
     } catch (error) {
         console.error("Error loading more files from directory:", error);
@@ -483,6 +498,7 @@ const submitSelectedSounds = async () => {
         padding: 0px 0px 0px 0px;
         border-radius: 4px;
         transition: background-color 0.2s;
+        flex-shrink: 0; /* 👈 Prevents the button from shrinking or wrapping */
     }
 
     .dropdown-container .dropdown-menu{        
@@ -499,6 +515,14 @@ const submitSelectedSounds = async () => {
         gap: 8px 16px;
     }
 
+    .zipFiles .dropdown-item {
+        padding: 4px;
+        background-color: lightblue;
+        border-radius:  4px;
+        justify-content: space-between; /* 👈 Pushes the text left and the button right */
+        width: 250px;
+    }
+
     .dropdown-item {
         display: flex;
         align-items: center;
@@ -506,6 +530,7 @@ const submitSelectedSounds = async () => {
         cursor: pointer;
         font-size: 11px;
         word-break: break-all;
+        
     }
 
 </style>
